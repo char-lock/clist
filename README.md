@@ -5,9 +5,10 @@ Note: As it stands, there is very little difference between the list as it exist
 
 
 ## Getting Started
+
 Add the header file into your includes and use the following syntax to generate a typed list (the below example is for an int list):
 
-```
+```C
 list(int);
 
 int main() {
@@ -22,8 +23,12 @@ int main() {
 
 
 ## To-Do
-[ ] Implement ability to hold multiple types within a single list. (remove necessity to generate typed lists)
-[ ] Implement reverse indexing (ability to loop around to the last value with -1)
-[ ] Implement safety checks for indexing.
-[ ] Implement list constructor from an array.
-[ ] Implement the following quality-of-life methods: clear, copy, count, extend, index, insert, pop, remove, reverse, sort
+[_] Implement ability to hold multiple types within a single list. (remove necessity to generate typed lists)
+
+[_] Implement reverse indexing (ability to loop around to the last value with -1)
+
+[_] Implement safety checks for indexing.
+
+[_] Implement list constructor from an array.
+
+[_] Implement the following quality-of-life methods: clear, copy, count, extend, index, insert, pop, remove, reverse, sort
