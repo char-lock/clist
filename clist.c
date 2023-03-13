@@ -1,5 +1,5 @@
 #include <stddef.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -36,13 +36,13 @@ typedef struct LIST {
 } LIST_T;
 
 LIST_T *list_new(void) {
-  LIST_T *list = malloc(sizeof(LIST_T));
+  LIST_T *list = (LIST_T*) malloc(sizeof(LIST_T));
   list->size = 1;
   list->length = 0;
   list->data = malloc(1);
-  list->el_types = malloc(sizeof(int));
-  list->el_sizes = malloc(sizeof(size_t));
-  list->el_offsets = malloc(sizeof(size_t));
+  list->el_types = (int*) malloc(sizeof(int));
+  list->el_sizes = (size_t*) malloc(sizeof(size_t));
+  list->el_offsets = (size_t*) malloc(sizeof(size_t));
   list->el_offsets[0] = 0;
   return list;
 }
@@ -60,11 +60,11 @@ void _list_append(LIST_T *list, void *value, size_t value_sz, int value_type) {
   list->size += value_sz;
   printf("updated size\n");
   list->length += 1;
-  list->el_types = realloc(list->el_types, sizeof(int) * list->length);
+  list->el_types = (int*)realloc(list->el_types, sizeof(int) * list->length);
   list->el_types[list->length - 1] = value_type;
-  list->el_sizes = realloc(list->el_types, sizeof(size_t) * list->length);
+  list->el_sizes = (size_t*)realloc(list->el_types, sizeof(size_t) * list->length);
   list->el_sizes[list->length - 1] = value_sz;
-  list->el_offsets = realloc(list->el_offsets, sizeof(size_t) * list->length);
+  list->el_offsets = (size_t*)realloc(list->el_offsets, sizeof(size_t) * list->length);
   if (list->length > 0) {
     list->el_offsets[list->length] = list->el_offsets[list->length - 1] + value_sz;
   } else {
@@ -95,22 +95,4 @@ void list_free(LIST_T *list) {
   free(list->el_types);
   free(list->data);
   free(list);
-}
-
-int main() {
-  LIST_T *list = list_new();
-  printf("made new list\n");
-  int a = 0xfffff;
-  char b = 'b';
-  list_append(list, a);
-  printf("appended a\n");
-  list_append(list, b);
-  printf("appended b\n");
-  int c = list_get(list, 0);
-  printf("got list[0]\n");
-  char d = list_get(list, 1);
-  printf("got list[1]\n");
-  printf("offsets: %i %i %i %i\n", list->el_offsets[0], list->el_offsets[1], list->el_offsets[2], list->el_offsets[3]);
-  printf("a: %i, b: %i ... c: %i, d: %i\n", a, b, c, d);
-  exit(0);
 }
