@@ -1,7 +1,9 @@
-#include <stddef.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <stdio.h>
+
+#define __CLIST_DEBUG 1
 
 #define get_type(x) _Generic((x),                                                         \
   char: TYPE_CHAR, signed char: TYPE_CHAR_SIGNED, unsigned char: TYPE_CHAR_UNSIGNED,      \
@@ -37,7 +39,7 @@ typedef struct LIST {
 
 LIST_T *list_new(void) {
   LIST_T *list = (LIST_T*) malloc(sizeof(LIST_T));
-  list->size = 1;
+  list->size = 0;
   list->length = 0;
   list->data = malloc(1);
   list->el_types = (int*) malloc(sizeof(int));
@@ -50,44 +52,54 @@ LIST_T *list_new(void) {
 #define list_append(x, y) _list_append(x, &y, sizeof(y), get_type(y))
 
 void _list_append(LIST_T *list, void *value, size_t value_sz, int value_type) {
-  printf("list_append :: value_sz: %i, value_type: %i\n", value_sz, value_type);
-  list->data = realloc(list->data, list->size + value_sz + 1);
-  printf("data realloc'd\n");
-  void *position = (char *)(list->data) + list->size;
-  printf("logged position\n");
-  memcpy(position, (void *)value, value_sz);
-  printf("copied memory\n");
+  printf("[DEBUG]: _list_append:52 entered -- size: %i, type: %i\n", value_sz, value_type);
+
+  // Reallocate memory to allow for the new element.
+  size_t new_size = list->size + value_sz;
+  list->data = realloc(list->data, new_size);
+  printf("[DEBUG]: _list_append:52 - list->data reallocated to %i\n", new_size);
+
+  // Calculate where to store data next.
+  void *data_pos = (char *)(list->data + list->size);
+  printf("[DEBUG]: _list_append:52 - next data position is %i\n", data_pos);
+  // Copy value into the data array.
+  memcpy(data_pos, value, value_sz);
+  printf("[DEBUG]: _list_append:52 - value copied into data.\n");
+
+  // Increment list metadata.
   list->size += value_sz;
-  printf("updated size\n");
   list->length += 1;
+  
+  // Reallocate the types array and store the new type ID.
   list->el_types = (int*)realloc(list->el_types, sizeof(int) * list->length);
   list->el_types[list->length - 1] = value_type;
+
+  // Reallocate the size array and store the new element's size.
   list->el_sizes = (size_t*)realloc(list->el_types, sizeof(size_t) * list->length);
   list->el_sizes[list->length - 1] = value_sz;
+
+  // Reallocate the offset array and store the current element's offset.
   list->el_offsets = (size_t*)realloc(list->el_offsets, sizeof(size_t) * list->length);
-  if (list->length > 0) {
-    list->el_offsets[list->length] = list->el_offsets[list->length - 1] + value_sz;
-  } else {
-    list->el_offsets[0] = 0;
-  }
+  if (list->length > 0)
+    list->el_offsets[list->length - 1] = list->length == 1 ? 0 : (new_size - value_sz);
 }
 
-#define list_get(x, y) (                                                                                          \
-  x->el_types[y] == TYPE_CHAR ? ((char *)(x->data + x->el_offsets[y]))                                                               \
-  : x->el_types[y] == TYPE_CHAR_SIGNED ? ((signed char *)x->data + x->el_offsets[y])                                 \
-  : x->el_types[y] == TYPE_CHAR_UNSIGNED ? ((((unsigned char *)x->data + (sizeof(unsigned char) * y))))                                \
-  : x->el_types[y] == TYPE_SHORT_SIGNED ? ((((short *)x->data + (sizeof(short) * y))))                                \
-  : x->el_types[y] == TYPE_SHORT_UNSIGNED ? ((((unsigned short *)x->data + (sizeof(short) * y))))                               \
-  : x->el_types[y] == TYPE_INT_SIGNED ? ((((int *)x->data + x->el_offsets[y])))                                    \
-  : x->el_types[y] == TYPE_INT_UNSIGNED ? ((((unsigned int *)x->data + (sizeof(int) * y))))                                   \
-  : x->el_types[y] == TYPE_LONG_SIGNED ? ((signed long *)(((char *)x->data + x->el_offsets[y])))                                  \
-  : x->el_types[y] == TYPE_LONG_UNSIGNED ? ((unsigned long *)(((char *)x->data + x->el_offsets[y])))                            \
-  : x->el_types[y] == TYPE_LONG_LONG_SIGNED ? ((signed long long *)(((char *)x->data + x->el_offsets[y])))                         \
-  : x->el_types[y] == TYPE_LONG_LONG_UNSIGNED ? ((unsigned long long *)(((char *)x->data + x->el_offsets[y])))                    \
-  : x->el_types[y] == TYPE_FLOAT ? ((float *)(((char *)x->data + x->el_offsets[y])))                                                \
-  : x->el_types[y] == TYPE_DOUBLE ? ((double *)(((char *)x->data + x->el_offsets[y])))                                               \
-  : x->el_types[y] == TYPE_DOUBLE_LONG ? ((long double *)(((char *)x->data + x->el_offsets[y])))                                      \
-  : NULL )
+#define list_get(x, y)                                                                                  \
+  ( x->el_types[y] == TYPE_CHAR               ? *(char *)((x->data + x->el_offsets[y]))                \
+  : x->el_types[y] == TYPE_CHAR_SIGNED        ? *(signed char *)((x->data + x->el_offsets[y]))         \
+  : x->el_types[y] == TYPE_CHAR_UNSIGNED      ? *(unsigned char *)((x->data + x->el_offsets[y]))       \
+  : x->el_types[y] == TYPE_SHORT_SIGNED       ? *(short *)((x->data + x->el_offsets[y]))               \
+  : x->el_types[y] == TYPE_SHORT_UNSIGNED     ? *(unsigned short *)((x->data + x->el_offsets[y]))      \
+  : x->el_types[y] == TYPE_INT_SIGNED         ? *(int *)((x->data + x->el_offsets[y]))                 \
+  : x->el_types[y] == TYPE_INT_UNSIGNED       ? *(unsigned int *)((x->data + x->el_offsets[y]))        \
+  : x->el_types[y] == TYPE_LONG_SIGNED        ? *(long *)((x->data + x->el_offsets[y]))                \
+  : x->el_types[y] == TYPE_LONG_UNSIGNED      ? *(unsigned long *)((x->data + x->el_offsets[y]))       \
+  : x->el_types[y] == TYPE_LONG_LONG_SIGNED   ? *(long long *)((x->data + x->el_offsets[y]))           \
+  : x->el_types[y] == TYPE_LONG_LONG_UNSIGNED ? *(unsigned long long *)((x->data + x->el_offsets[y]))  \
+  : x->el_types[y] == TYPE_FLOAT              ? *(float *)((x->data + x->el_offsets[y]))               \
+  : x->el_types[y] == TYPE_DOUBLE             ? *(double *)((x->data + x->el_offsets[y]))              \
+  : x->el_types[y] == TYPE_DOUBLE_LONG        ? *(long double *)((x->data + x->el_offsets[y]))         \
+  : 0 )
 
 void list_free(LIST_T *list) {
   free(list->el_offsets);
@@ -95,4 +107,21 @@ void list_free(LIST_T *list) {
   free(list->el_types);
   free(list->data);
   free(list);
+}
+
+int main() {
+  LIST_T *list = list_new();
+  printf("made new list\n");
+  int a = 32767;
+  char b = 'b';
+  list_append(list, a);
+  printf("appended a\n");
+  list_append(list, b);
+  printf("appended b\n");
+  int c = list_get(list, 0);
+  printf("got list[0]\n");
+  char d = list_get(list, 1);
+  printf("got list[1]\n");
+  printf("a: %i, b: %i ... c: %i, d: %i\n", a, b, c, d);
+  exit(0);
 }
